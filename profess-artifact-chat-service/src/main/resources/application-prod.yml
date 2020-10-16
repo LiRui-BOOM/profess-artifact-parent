@@ -1,0 +1,34 @@
+server:
+  port: 9100
+spring:
+    application:
+      name: xupt-acat-note-service
+    cloud:
+      nacos:
+        discovery:
+          server-addr: localhost:8848
+    datasource:
+        type: com.alibaba.druid.pool.DruidDataSource
+        druid:
+            driver-class-name: com.mysql.cj.jdbc.Driver
+            url: jdbc:mysql://localhost:3306/xupt-acat-recruitment?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+            username: root
+            password: root
+            initial-size: 10
+            max-active: 100
+            min-idle: 10
+            max-wait: 60000
+            pool-prepared-statements: true
+            max-pool-prepared-statement-per-connection-size: 20
+            time-between-eviction-runs-millis: 60000
+            min-evictable-idle-time-millis: 300000
+    main:
+            allow-bean-definition-overriding: true
+
+feign:
+  hystrix:
+    enabled: false
+
+rsa:
+  key:
+    pubKeyFile: D:\WorkSpace\xupt-acat-recruitment-parent\resources\id_key_rsa.pub

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="profess-artifact-auth-service" />
+        <module name="profess-artifact-chat-service" />
+        <module name="profess-artifact-common" />
+        <module name="profess-artifact-model" />
+        <module name="profess-artifact-user-gateway" />
+        <module name="profess-artifact-user-service" />
+      </profile>
+    </annotationProcessing>
+  </component>
+</project>

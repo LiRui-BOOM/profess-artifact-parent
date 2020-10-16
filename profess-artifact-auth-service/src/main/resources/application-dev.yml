@@ -1,0 +1,55 @@
+server:
+  port: 8200
+
+spring:
+    application:
+      name: profess-artifact-auth-service
+    cloud:
+      #alibaba:
+      #  seata:
+      #    #自定义事务组名称需要与seata-server中的对应
+      #    tx-service-group: fsp_tx_group
+      nacos:
+        discovery:
+          server-addr: localhost:8848
+
+    datasource:
+        type: com.alibaba.druid.pool.DruidDataSource
+        druid:
+            driver-class-name: com.mysql.cj.jdbc.Driver
+            url: jdbc:mysql://localhost:3306/profess_artifact?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+            username: root
+            password: root
+            initial-size: 10
+            max-active: 100
+            min-idle: 10
+            max-wait: 60000
+            pool-prepared-statements: true
+            max-pool-prepared-statement-per-connection-size: 20
+            time-between-eviction-runs-millis: 60000
+            min-evictable-idle-time-millis: 300000
+    main:
+            allow-bean-definition-overriding: true
+
+    #将themilef的默认缓存禁用，热加载生效
+    thymeleaf:
+      cache: false
+
+feign:
+  hystrix:
+    enabled: true
+
+
+#mybatis
+mybatis-plus:
+  #mapper-locations: classpath*:/mapper/*.xml
+  global-config:
+      #数据库相关配置
+      db-config:
+        #主键类型  AUTO:"数据库ID自增", INPUT:"用户输入ID", ID_WORKER:"全局唯一ID (数字类型唯一ID)", UUID:"全局唯一ID UUID";
+        id-type: AUTO
+
+rsa:
+  key:
+    pubKeyFile: D:\WorkSpace\profess-artifact-parent\resources\id_key_rsa.pub
+    priKeyFile: D:\WorkSpace\profess-artifact-parent\resources\id_key_rsa
