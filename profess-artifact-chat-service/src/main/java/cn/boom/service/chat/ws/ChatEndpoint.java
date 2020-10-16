@@ -94,6 +94,7 @@ public class ChatEndpoint {
         ChatFromServerMessageVo serverMessageVo = new ChatFromServerMessageVo();
         serverMessageVo.setFromUserId(clientMessageVo.getFromUserId());
         serverMessageVo.setSystem(false);
+        serverMessageVo.setCode(200);
         serverMessageVo.setMessage(clientMessageVo.getMessage());
         serverMessageVo.setSendTime(new Date());
 
