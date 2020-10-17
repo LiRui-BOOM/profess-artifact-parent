@@ -2,10 +2,11 @@ package cn.boom.framework.model.vo;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Date;
 
 @Data
-public class ChatFromServerMessageVo {
+public class ChatFromServerMessageVo implements Serializable {
 
     private boolean isSystem;
 

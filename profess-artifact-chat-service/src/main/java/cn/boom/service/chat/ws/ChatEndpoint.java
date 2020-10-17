@@ -9,13 +9,19 @@ import cn.boom.framework.model.vo.ChatFromClientMessageVo;
 import cn.boom.framework.model.vo.ChatFromServerMessageVo;
 import cn.boom.service.chat.client.UserServiceClient;
 import cn.boom.service.chat.config.SpringUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.BoundListOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
@@ -26,6 +32,14 @@ public class ChatEndpoint {
 
     private UserServiceClient userServiceClient = SpringUtil.getBean(UserServiceClient.class);
 
+    private static RedisTemplate redisTemplate;
+
+    @Resource
+    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
+        ChatEndpoint.redisTemplate = redisTemplate;
+    }
+
+
     private Session session;
     /**
      * concurrent包的线程安全Set，用来存放每个客户端对应的WebSocket对象。
@@ -33,7 +47,7 @@ public class ChatEndpoint {
     private static CopyOnWriteArraySet<ChatEndpoint> chatEndpoints = new CopyOnWriteArraySet<>();
 
     @OnOpen//建立连接
-    public void onOpen(Session session, EndpointConfig config,@PathParam("id") Long userId) {
+    public void onOpen(Session session, EndpointConfig config, @PathParam("id") Long userId) {
 
         this.session = session;
         this.userId = userId;
@@ -44,10 +58,12 @@ public class ChatEndpoint {
         }
 
         System.out.println("userId=" + this.userId + " 连接，当前连接用户数：" + chatEndpoints.size());
+
+        sendHistoryMessage(this.userId);
     }
 
     @OnMessage
-    public void onMessage(String message,Session session) {
+    public void onMessage(String message, Session session) {
         sendP2PMessage(message);
     }
 
@@ -59,9 +75,10 @@ public class ChatEndpoint {
 
     /**
      * 点对点广播消息
+     *
      * @param jsonMsg 消息JSON
      */
-    private void sendP2PMessage(String jsonMsg){
+    private void sendP2PMessage(String jsonMsg) {
 
         ChatFromClientMessageVo clientMessageVo = JsonUtils.toBean(jsonMsg, ChatFromClientMessageVo.class);
 
@@ -87,6 +104,11 @@ public class ChatEndpoint {
 
         if (!isOnLine(clientMessageVo.getToUserId())) {
             sendP2PSystemMessage(session, new MessageEntity("对方未上线！"), 400);
+            // 将消息保存redis
+            // 历史消息队列 右入队
+            BoundListOperations boundListOperations = redisTemplate.boundListOps("CHAT-HISTORY-TO-" + clientMessageVo.getToUserId());
+            boundListOperations.rightPush(clientMessageVo);
+
             return;
         }
 
@@ -106,7 +128,7 @@ public class ChatEndpoint {
                     chatEndpoint.session.getBasicRemote().sendText(JsonUtils.toString(serverMessageVo));
                 } catch (IOException e) {
                     e.printStackTrace();
-                    sendP2PSystemMessage(session,new MessageEntity("消息发送失败！"),500);
+                    sendP2PSystemMessage(session, new MessageEntity("消息发送失败！"), 500);
                 }
                 return;
             }
@@ -126,6 +148,29 @@ public class ChatEndpoint {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 发送历史消息
+     *
+     * @param toUserId
+     */
+    private void sendHistoryMessage(Long toUserId) {
+
+        BoundListOperations boundListOperations = redisTemplate.boundListOps("CHAT-HISTORY-TO-" + toUserId);
+
+        List<ChatFromClientMessageVo> history = boundListOperations.range(0, -1);
+
+        if (history == null || history.size() == 0) {
+            return;
+        }
+
+        for (ChatFromClientMessageVo vo : history) {
+            sendP2PMessage(JsonUtils.toString(vo));
+        }
+
+        // 删除历史消息
+        redisTemplate.delete("CHAT-HISTORY-TO-" + toUserId);
     }
 
     public boolean isOnLine(Long userId) {

@@ -2,9 +2,11 @@ package cn.boom.framework.model.vo;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 
 @Data
-public class ChatFromClientMessageVo {
+public class ChatFromClientMessageVo implements Serializable {
 
     private Long fromUserId;
 
