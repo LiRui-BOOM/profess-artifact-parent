@@ -128,7 +128,7 @@ public class ChatEndpoint {
         }
     }
 
-    private boolean isOnLine(Long userId) {
+    public boolean isOnLine(Long userId) {
 
         for (ChatEndpoint endpoint : chatEndpoints) {
             if (endpoint.userId.equals(userId)) {
