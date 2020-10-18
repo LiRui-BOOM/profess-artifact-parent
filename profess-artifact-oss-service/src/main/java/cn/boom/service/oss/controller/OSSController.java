@@ -5,8 +5,9 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.common.utils.BinaryUtil;
 import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -30,7 +31,7 @@ public class OSSController {
     @Resource
     private OSSClient ossClient;
 
-    @RequestMapping("oss/policy")
+    @GetMapping("oss/policy")
     public R policy() {
 
         String host = "https://" + bucket + "." + endpoint; // host的格式为 bucketname.endpoint
@@ -58,7 +59,7 @@ public class OSSController {
             String postSignature = ossClient.calculatePostSignature(postPolicy);
 
             respMap = new LinkedHashMap<String, String>();
-            respMap.put("accessid", accessId);
+            respMap.put("ossAccessKeyId", accessId);
             respMap.put("policy", encodedPolicy);
             respMap.put("signature", postSignature);
             respMap.put("dir", dir);
