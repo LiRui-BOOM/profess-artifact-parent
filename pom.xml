@@ -15,6 +15,7 @@
         <module>profess-artifact-auth-service</module>
         <module>profess-artifact-user-gateway</module>
         <module>profess-artifact-note-service</module>
+        <module>profess-artifact-oss-service</module>
     </modules>
 
     <parent>

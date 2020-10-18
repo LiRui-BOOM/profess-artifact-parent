@@ -12,6 +12,7 @@
         <module name="profess-artifact-common" />
         <module name="profess-artifact-model" />
         <module name="profess-artifact-note-service" />
+        <module name="profess-artifact-oss-service" />
         <module name="profess-artifact-user-gateway" />
         <module name="profess-artifact-user-service" />
       </profile>
