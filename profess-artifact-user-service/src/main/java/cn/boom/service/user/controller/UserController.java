@@ -66,4 +66,9 @@ public class UserController {
         return R.ok().put("data",userService.updateStatusById(id,status));
     }
 
+    @GetMapping("/sendMessageTest")
+    public R sendMessageTest() {
+        userService.sendMessageTest();
+        return R.ok();
+    }
 }

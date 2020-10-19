@@ -8,10 +8,12 @@ spring:
         discovery:
           server-addr: localhost:8848
 
+
+
 feign:
   hystrix:
     enabled: false
 
-rsa:
-  key:
-    pubKeyFile: D:\WorkSpace\profess-artifact-parentt\resources\id_key_rsa.pub
+#rsa:
+#  key:
+#    pubKeyFile: D:\WorkSpace\profess-artifact-parentt\resources\id_key_rsa.pub

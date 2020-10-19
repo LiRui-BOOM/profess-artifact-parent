@@ -3,9 +3,14 @@ package cn.boom.service.user.service.impl;
 import cn.boom.framework.common.exception.ExceptionCast;
 import cn.boom.framework.common.exception.ExceptionCodeEnum;
 import cn.boom.framework.common.utils.BCryptUtil;
+import cn.boom.framework.common.utils.JsonUtils;
 import cn.boom.framework.common.utils.RegexUtils;
+import cn.boom.framework.common.utils.TokenUtils;
 import cn.boom.framework.model.entity.TbUser;
 import cn.boom.framework.model.entity.TbUserRole;
+import cn.boom.framework.model.enums.TencentSignEnum;
+import cn.boom.framework.model.enums.TencentTemplateEnum;
+import cn.boom.framework.model.model.SMSParameter;
 import cn.boom.service.user.dao.UserDao;
 import cn.boom.service.user.dao.UserRoleDao;
 import cn.boom.service.user.service.UserService;
@@ -13,6 +18,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -21,7 +30,7 @@ import java.util.Date;
 import java.util.List;
 
 @Service
-//@PropertySource(value = {"classpath:rabbitmq.properties", "classpath:user.properties", "classpath:email.properties"}, encoding = "UTF-8")
+@PropertySource(value = {"classpath:rabbitmq.properties"}, encoding = "UTF-8")
 public class UserServiceImpl implements UserService {
 
     @Resource
@@ -29,6 +38,9 @@ public class UserServiceImpl implements UserService {
 
     @Resource
     private UserRoleDao userRoleDao;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     @Override
     public TbUser findOneById(Long id) {
@@ -243,6 +255,26 @@ public class UserServiceImpl implements UserService {
         userDao.updateById(tbUser);
 
         return tbUser;
+    }
+
+    @Value("${SMS_EXCHANGE}")
+    private String SMS_EXCHANGE;
+
+    @Value("${SMS_ROUTINGKEY}")
+    private String SMS_ROUTINGKEY;
+
+    @Override
+    public void sendMessageTest() {
+
+        SMSParameter parameter = new SMSParameter();
+        ArrayList<String> params = new ArrayList<>();
+        params.add(TokenUtils.getToken());
+        parameter.setParams(params);
+        parameter.setPhoneNumber("15691729703");
+        parameter.setSmsSign(TencentSignEnum.TENCENT_SIGN_YAO_CHUAN_BU_YONG_JIANG.getSign());
+        parameter.setTemplateId(TencentTemplateEnum.TENCENT_TEMPLATE_CHECKCODE.getTemplateId());
+
+        rabbitTemplate.convertAndSend(SMS_EXCHANGE,SMS_ROUTINGKEY,JsonUtils.toString(parameter));
     }
 }
 

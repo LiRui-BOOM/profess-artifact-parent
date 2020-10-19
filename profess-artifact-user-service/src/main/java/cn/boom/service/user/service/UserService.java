@@ -25,4 +25,6 @@ public interface UserService {
     public TbUser update(TbUser tbUser);
 
     public TbUser updateStatusById(Long id, String status);
+
+    public void sendMessageTest();
 }
