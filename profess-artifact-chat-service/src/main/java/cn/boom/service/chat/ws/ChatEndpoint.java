@@ -59,6 +59,10 @@ public class ChatEndpoint {
 
         System.out.println("userId=" + this.userId + " 连接，当前连接用户数：" + chatEndpoints.size());
 
+        // 上线通知：在线且给连接用户发过信息
+        sendOnLineNote(this.userId);
+
+        // 为连接用户发送历史信息
         sendHistoryMessage(this.userId);
     }
 
@@ -171,6 +175,31 @@ public class ChatEndpoint {
 
         // 删除历史消息
         redisTemplate.delete("CHAT-HISTORY-TO-" + toUserId);
+    }
+
+
+    private void sendOnLineNote(Long userId) {
+
+        BoundListOperations boundListOperations = redisTemplate.boundListOps("CHAT-HISTORY-TO-" + userId);
+        List<ChatFromClientMessageVo> history = boundListOperations.range(0, -1);
+
+        List<Long> historyUserIds = new ArrayList<>();
+
+        for (ChatFromClientMessageVo vo : history) {
+            historyUserIds.add(vo.getFromUserId());
+        }
+
+        // 为在线的 且 发送给当前用户消息的 用户发送上线通知
+        for (ChatEndpoint chatEndpoint : chatEndpoints) {
+
+            if (historyUserIds.contains(chatEndpoint.userId)) {
+
+                TbUser onLineUser = CallResultHandler.getData(userServiceClient.findOneById(chatEndpoint.userId), "data", TbUser.class);
+                MessageEntity entity = new MessageEntity();
+                entity.setMsg("上线通知：" + onLineUser.getNickName() + "已上线！");
+                sendP2PSystemMessage(chatEndpoint.session,entity,200);
+            }
+        }
     }
 
     public boolean isOnLine(Long userId) {
