@@ -2,15 +2,18 @@ package cn.boom.service.user.service.impl;
 
 import cn.boom.framework.common.exception.ExceptionCast;
 import cn.boom.framework.common.exception.ExceptionCodeEnum;
-import cn.boom.framework.common.utils.BCryptUtil;
-import cn.boom.framework.common.utils.JsonUtils;
-import cn.boom.framework.common.utils.RegexUtils;
-import cn.boom.framework.common.utils.TokenUtils;
+import cn.boom.framework.common.utils.*;
 import cn.boom.framework.model.entity.TbUser;
 import cn.boom.framework.model.entity.TbUserRole;
 import cn.boom.framework.model.enums.TencentSignEnum;
 import cn.boom.framework.model.enums.TencentTemplateEnum;
+import cn.boom.framework.model.model.BaiduPhoneEntity;
+import cn.boom.framework.model.model.EmailMessage;
+import cn.boom.framework.model.model.Payload;
 import cn.boom.framework.model.model.SMSParameter;
+import cn.boom.framework.model.vo.BaiduCryptVo;
+import cn.boom.framework.model.vo.BaiduLoginCallBackVo;
+import cn.boom.service.user.config.RsaConfiguration;
 import cn.boom.service.user.dao.UserDao;
 import cn.boom.service.user.dao.UserRoleDao;
 import cn.boom.service.user.service.UserService;
@@ -21,16 +24,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.bootstrap.encrypt.RsaProperties;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
-@PropertySource(value = {"classpath:rabbitmq.properties"}, encoding = "UTF-8")
+@PropertySource(value = {"classpath:rabbitmq.properties", "classpath:user.properties"}, encoding = "UTF-8")
 public class UserServiceImpl implements UserService {
 
     @Resource
@@ -41,6 +43,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RsaConfiguration rsaConfiguration;
 
     @Override
     public TbUser findOneById(Long id) {
@@ -155,6 +160,10 @@ public class UserServiceImpl implements UserService {
         return userDao.selectPage(page, wrapper);
     }
 
+
+    @Value("${DEFAULT_USER_PIC_URL}")
+    private String DEFAULT_USER_PIC_URL;
+
     @Override
     public TbUser add(TbUser user) {
 
@@ -162,9 +171,8 @@ public class UserServiceImpl implements UserService {
             ExceptionCast.cast("user is null ！");
         }
 
-        if (StringUtils.isEmpty(user.getUsername()) ||
-                user.getPassword() == null) {
-            ExceptionCast.cast("用户信息不全面！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        if (StringUtils.isEmpty(user.getUsername())) {
+            ExceptionCast.cast("username is null！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
         }
 
         if (isUsernameUsed(user.getUsername())) {
@@ -172,10 +180,9 @@ public class UserServiceImpl implements UserService {
         }
 
         // 数据校验 end
-
-        user.setPassword(BCryptUtil.encode(user.getPassword()));
         user.setStatus("1");
-
+        user.setNickName("游客" + UUID.randomUUID().toString().substring(0, 6));
+        user.setUserPic(DEFAULT_USER_PIC_URL);
         userDao.insert(user);
 
         //为其添加角色...USER
@@ -232,9 +239,23 @@ public class UserServiceImpl implements UserService {
     @Override
     public TbUser update(TbUser tbUser) {
 
-        ExceptionCast.cast("方法还未实现！");
+        if (tbUser == null || tbUser.getId() == null) {
+            ExceptionCast.cast("参数不合法！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
 
-        return null;
+        TbUser oldUser = findOneById(tbUser.getId());
+
+        if (oldUser == null) {
+            ExceptionCast.cast(ExceptionCodeEnum.DATA_NOT_EXIST_EXCEPTION.getMsg(), ExceptionCodeEnum.DATA_NOT_EXIST_EXCEPTION.getCode());
+        }
+
+        // 不允许修改的内容
+        tbUser.setUsername(oldUser.getUsername());
+        tbUser.setPassword(oldUser.getPassword());
+        tbUser.setPhone(oldUser.getPhone());
+        tbUser.setStatus(oldUser.getStatus());
+        userDao.updateById(tbUser);
+        return tbUser;
     }
 
     @Override
@@ -257,24 +278,50 @@ public class UserServiceImpl implements UserService {
         return tbUser;
     }
 
-    @Value("${SMS_EXCHANGE}")
-    private String SMS_EXCHANGE;
+    @Value("${EMAIL_EXCHANGE}")
+    private String EMAIL_EXCHANGE;
 
-    @Value("${SMS_ROUTINGKEY}")
-    private String SMS_ROUTINGKEY;
+    @Value("${EMAIL_ROUTINGKEY}")
+    private String EMAIL_ROUTINGKEY;
 
     @Override
     public void sendMessageTest() {
 
-        SMSParameter parameter = new SMSParameter();
-        ArrayList<String> params = new ArrayList<>();
-        params.add(TokenUtils.getToken());
-        parameter.setParams(params);
-        parameter.setPhoneNumber("15691729703");
-        parameter.setSmsSign(TencentSignEnum.TENCENT_SIGN_YAO_CHUAN_BU_YONG_JIANG.getSign());
-        parameter.setTemplateId(TencentTemplateEnum.TENCENT_TEMPLATE_CHECKCODE.getTemplateId());
+        EmailMessage message = new EmailMessage();
+        message.setToEmail("2495399053@qq.com");
+        message.setText("ok");
+        message.setTitle("ok");
 
-        rabbitTemplate.convertAndSend(SMS_EXCHANGE,SMS_ROUTINGKEY,JsonUtils.toString(parameter));
+        rabbitTemplate.convertAndSend(EMAIL_EXCHANGE, EMAIL_ROUTINGKEY, JsonUtils.toString(message));
+    }
+
+    @Override
+    public TbUser getPhoneNumber(BaiduCryptVo baiduCryptVo, String token) {
+
+        BaiduCryptUtils cryptUtils = new BaiduCryptUtils();
+
+        Payload<TbUser> payload = JwtUtils.getInfoFromToken(token, rsaConfiguration.getPublicKey(), TbUser.class);
+        TbUser tbUser = payload.getUserInfo();
+
+        if (tbUser == null) {
+            ExceptionCast.cast("不合法的Authorization!", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
+
+        String sessionKey = tbUser.getSessionKey();
+
+        String s = null;
+        try {
+            s = cryptUtils.decrypt(baiduCryptVo.getData(), sessionKey, baiduCryptVo.getIv());
+        } catch (Exception e) {
+            e.printStackTrace();
+            ExceptionCast.cast("数据解密失败", 500);
+        }
+        BaiduPhoneEntity phoneEntity = JsonUtils.toBean(s, BaiduPhoneEntity.class);
+        tbUser.setPhone(phoneEntity.getMobile());
+        userDao.updateById(tbUser);
+        //屏蔽sessionKey
+        tbUser.setSessionKey(null);
+        return tbUser;
     }
 }
 

@@ -1,13 +1,17 @@
 package cn.boom.service.user.controller;
 
 import cn.boom.framework.common.response.R;
+import cn.boom.framework.common.utils.BaiduCryptUtils;
 import cn.boom.framework.model.entity.TbUser;
+import cn.boom.framework.model.vo.BaiduCryptVo;
 import cn.boom.service.user.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Api(tags = {"User接口"})
 @RestController
@@ -70,5 +74,13 @@ public class UserController {
     public R sendMessageTest() {
         userService.sendMessageTest();
         return R.ok();
+    }
+
+    @PostMapping("/getPhoneNumber")
+    public R getPhoneNumber(@RequestBody BaiduCryptVo baiduCryptVo,HttpServletRequest request){
+
+        String auth = request.getHeader("Authorization");
+        String token = auth.replace("Bearer ", "");
+        return R.ok().put("data",userService.getPhoneNumber(baiduCryptVo,token));
     }
 }

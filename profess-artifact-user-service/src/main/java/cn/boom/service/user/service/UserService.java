@@ -2,6 +2,7 @@ package cn.boom.service.user.service;
 
 
 import cn.boom.framework.model.entity.TbUser;
+import cn.boom.framework.model.vo.BaiduCryptVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
 import java.util.List;
@@ -27,4 +28,6 @@ public interface UserService {
     public TbUser updateStatusById(Long id, String status);
 
     public void sendMessageTest();
+
+    public TbUser getPhoneNumber(BaiduCryptVo baiduCryptVo, String token);
 }

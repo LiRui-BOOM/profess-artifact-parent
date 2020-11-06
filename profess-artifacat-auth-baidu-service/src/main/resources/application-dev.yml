@@ -1,14 +1,14 @@
 server:
-  port: 8100
+  port: 8200
 
 spring:
     application:
-      name: profess-artifact-user-service
+      name: profess-artifact-auth-baidu-service
     cloud:
-    #  alibaba:
-    #    seata:
-    #    #自定义事务组名称需要与seata-server中的对应
-    #      tx-service-group: fsp_tx_group
+      #alibaba:
+      #  seata:
+      #    #自定义事务组名称需要与seata-server中的对应
+      #    tx-service-group: fsp_tx_group
       nacos:
         discovery:
           server-addr: localhost:8848
@@ -30,10 +30,11 @@ spring:
             min-evictable-idle-time-millis: 300000
     main:
             allow-bean-definition-overriding: true
+
     ## Redis 配置
     redis:
       ## Redis数据库索引（默认为0）
-      database: 0
+      database: 1
       ## Redis服务器地址
       host: localhost
       ## Redis服务器连接端口
@@ -63,7 +64,8 @@ spring:
 
 feign:
   hystrix:
-    enabled: false
+    enabled: true
+
 
 #mybatis
 mybatis-plus:
@@ -74,13 +76,14 @@ mybatis-plus:
         #主键类型  AUTO:"数据库ID自增", INPUT:"用户输入ID", ID_WORKER:"全局唯一ID (数字类型唯一ID)", UUID:"全局唯一ID UUID";
         id-type: AUTO
 
-
 baidu:
   config:
     url: https://spapi.baidu.com/oauth/jscode2sessionkey
-    client_id: zmc0RBwdtgpH0P5cRtOUEyTmTZRv9NZG
-    sk: vP3lj098xgZNTawrdF33UXmvk3U6Kmdc
+    client_id: fTXnpp8C3O6AD5iaAx6pfS2MTTBUF9ZG
+    sk: tSFlKnvVRGFmcdxhVAQyIbGdhpwnRZ37
+
 
 rsa:
   key:
     pubKeyFile: D:\WorkSpace\profess-artifact-parent\resources\id_key_rsa.pub
+    priKeyFile: D:\WorkSpace\profess-artifact-parent\resources\id_key_rsa

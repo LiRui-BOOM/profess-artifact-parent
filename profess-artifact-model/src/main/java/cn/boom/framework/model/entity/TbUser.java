@@ -1,8 +1,10 @@
 package cn.boom.framework.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -15,14 +17,23 @@ import java.util.List;
 public class TbUser implements Serializable, UserDetails {
 
     private Long id;
+    private String openId;
+
+    @TableField(exist = false)
+    private String sessionKey;
     private String username;
     private String password;
     private String status;
     private String nickName;
     private String userPic;
     private String phone;
+    private String email;
+    private String vxQq;
     private Integer age;
     private String sex;
+
+    @JsonFormat(pattern = "yyyy-MM-dd",timezone = "GMT+8") //Jackson包使用注解
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
     private Date birthday;
     private Integer height;
     private Double weight;

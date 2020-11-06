@@ -56,7 +56,6 @@ public class ChatEndpoint {
             // 加入在线WebSocket集合
             chatEndpoints.add(this);
         }
-
         System.out.println("userId=" + this.userId + " 连接，当前连接用户数：" + chatEndpoints.size());
 
         // 上线通知：在线且给连接用户发过信息
@@ -110,6 +109,7 @@ public class ChatEndpoint {
             sendP2PSystemMessage(session, new MessageEntity("对方未上线！"), 400);
             // 将消息保存redis
             // 历史消息队列 右入队
+            clientMessageVo.setSendTime(new Date());
             BoundListOperations boundListOperations = redisTemplate.boundListOps("CHAT-HISTORY-TO-" + clientMessageVo.getToUserId());
             boundListOperations.rightPush(clientMessageVo);
 
@@ -118,11 +118,16 @@ public class ChatEndpoint {
 
         // 封装服务端发送vo
         ChatFromServerMessageVo serverMessageVo = new ChatFromServerMessageVo();
-        serverMessageVo.setFromUserId(clientMessageVo.getFromUserId());
+        serverMessageVo.setFromUser(CallResultHandler.getData(userServiceClient.findOneById(clientMessageVo.getFromUserId()), "data", TbUser.class));
         serverMessageVo.setSystem(false);
         serverMessageVo.setCode(200);
         serverMessageVo.setMessage(clientMessageVo.getMessage());
-        serverMessageVo.setSendTime(new Date());
+
+        if (clientMessageVo.getSendTime() == null) {
+            serverMessageVo.setSendTime(new Date());
+        } else {
+            serverMessageVo.setSendTime(clientMessageVo.getSendTime());
+        }
 
         // 给 toUser 发送message
         for (ChatEndpoint chatEndpoint : chatEndpoints) {
@@ -145,7 +150,7 @@ public class ChatEndpoint {
         vo.setSystem(true);
         vo.setCode(code);
         vo.setSendTime(new Date());
-        vo.setFromUserId(null);
+        vo.setFromUser(null);
         vo.setMessage(entity);
         try {
             session.getBasicRemote().sendText(JsonUtils.toString(vo));
@@ -183,6 +188,7 @@ public class ChatEndpoint {
         BoundListOperations boundListOperations = redisTemplate.boundListOps("CHAT-HISTORY-TO-" + userId);
         List<ChatFromClientMessageVo> history = boundListOperations.range(0, -1);
 
+        //所有给登录userId 发过离线信息的用户id
         List<Long> historyUserIds = new ArrayList<>();
 
         for (ChatFromClientMessageVo vo : history) {
@@ -194,7 +200,7 @@ public class ChatEndpoint {
 
             if (historyUserIds.contains(chatEndpoint.userId)) {
 
-                TbUser onLineUser = CallResultHandler.getData(userServiceClient.findOneById(chatEndpoint.userId), "data", TbUser.class);
+                TbUser onLineUser = CallResultHandler.getData(userServiceClient.findOneById(userId), "data", TbUser.class);
                 MessageEntity entity = new MessageEntity();
                 entity.setMsg("上线通知：" + onLineUser.getNickName() + "已上线！");
                 sendP2PSystemMessage(chatEndpoint.session,entity,200);
@@ -220,17 +226,11 @@ public class ChatEndpoint {
 
         ChatEndpoint that = (ChatEndpoint) o;
 
-        if (userId != null ? !userId.equals(that.userId) : that.userId != null) return false;
-        if (userServiceClient != null ? !userServiceClient.equals(that.userServiceClient) : that.userServiceClient != null)
-            return false;
-        return session != null ? session.equals(that.session) : that.session == null;
+        return userId != null ? userId.equals(that.userId) : that.userId == null;
     }
 
     @Override
     public int hashCode() {
-        int result = userId != null ? userId.hashCode() : 0;
-        result = 31 * result + (userServiceClient != null ? userServiceClient.hashCode() : 0);
-        result = 31 * result + (session != null ? session.hashCode() : 0);
-        return result;
+        return userId != null ? userId.hashCode() : 0;
     }
 }

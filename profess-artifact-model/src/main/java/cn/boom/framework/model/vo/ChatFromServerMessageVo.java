@@ -1,5 +1,6 @@
 package cn.boom.framework.model.vo;
 
+import cn.boom.framework.model.entity.TbUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,7 +15,8 @@ public class ChatFromServerMessageVo implements Serializable {
 
     private Integer code;
 
-    private Long fromUserId;
+    //private Long fromUserId;
+    private TbUser fromUser;
 
     private Object message;
 
