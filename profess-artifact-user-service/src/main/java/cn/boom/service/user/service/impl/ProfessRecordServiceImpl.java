@@ -2,6 +2,7 @@ package cn.boom.service.user.service.impl;
 
 import cn.boom.framework.common.exception.ExceptionCast;
 import cn.boom.framework.common.exception.ExceptionCodeEnum;
+import cn.boom.framework.common.utils.DateUtil;
 import cn.boom.framework.common.utils.JsonUtils;
 import cn.boom.framework.common.utils.RegexUtils;
 import cn.boom.framework.model.entity.TbProfess;
@@ -80,6 +81,39 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
     }
 
     @Override
+    public ProfessRecordEntity findEntityByFromTo(Long from, Long to) {
+
+        if (from == null || to == null) {
+            ExceptionCast.cast("参数不合法！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
+
+        TbUser fromUser = userService.findOneById(from);
+        TbUser toUser = userService.findOneById(to);
+
+        QueryWrapper<TbProfessRecord> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.eq("from_id", from);
+        queryWrapper.eq("to_id", to);
+
+        List<TbProfessRecord> professRecords = professRecordDao.selectList(queryWrapper);
+
+        ProfessRecordEntity entity = new ProfessRecordEntity();
+
+        entity.setFrom(fromUser);
+        entity.setTo(toUser);
+
+        if (professRecords == null || professRecords.size() == 0) {
+            return entity;
+        }
+
+        entity.setProfessRecord(professRecords.get(0));
+        TbProfess profess = professService.findOneById(professRecords.get(0).getProfessId());
+        entity.setProfess(profess);
+
+        return entity;
+    }
+
+    @Override
     public List<TbProfessRecord> findListByFromId(Long from) {
 
         if (from == null) {
@@ -96,6 +130,7 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
     public List<ProfessRecordEntity> findEntityListByFromId(Long from) {
 
         List<ProfessRecordEntity> res = new ArrayList<>();
+
         List<TbProfessRecord> professRecordList = findListByFromId(from);
 
         for (TbProfessRecord tbProfessRecord : professRecordList) {
@@ -116,20 +151,7 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
         QueryWrapper<TbProfessRecord> wrapper = new QueryWrapper<>();
         wrapper.eq("to_id", to);
 
-        List<TbProfessRecord> res = new ArrayList<>();
-
-        List<TbProfessRecord> toProfessRecords = professRecordDao.selectList(wrapper);
-
-        for (TbProfessRecord professRecord : toProfessRecords) {
-
-            TbProfess profess = professService.findOneById(professRecord.getProfessId());
-
-            if (profess.getIsSend().equals("1")) { //已发送的profess
-                res.add(professRecord);
-            }
-        }
-
-        return res;
+        return professRecordDao.selectList(wrapper);
     }
 
     @Override
@@ -147,22 +169,22 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
         return res;
     }
 
-
     @Value("${EMAIL_SEND_PROFESS_NOTE_TITLE}")
     private String EMAIL_SEND_PROFESS_NOTE_TITLE;
 
-    @Value("${EMAIL_SEND_PROFESS_NOTE_CONTENT}")
-    private String EMAIL_SEND_PROFESS_NOTE_CONTENT;
+    @Value("${EMAIL_SEND_NOT_SURE_PROFESS_NOTE_CONTENT}")
+    private String EMAIL_SEND_NOT_SURE_PROFESS_NOTE_CONTENT;
+
+    @Value("${EMAIL_SEND_SURE_PROFESS_NOTE_CONTENT}")
+    private String EMAIL_SEND_SURE_PROFESS_NOTE_CONTENT;
 
     @Value("${EMAIL_SEND_PROFESS_NOTE_URL}")
     private String EMAIL_SEND_PROFESS_NOTE_URL;
 
-    private String genSendProfessNoteContent(String name) {
-        String content = EMAIL_SEND_PROFESS_NOTE_CONTENT.replace("{{name}}", name);
-        content =  content.replace("{{url}}", EMAIL_SEND_PROFESS_NOTE_URL);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String s = sdf.format(new Date());
-        return content.replace("{{time}}", s);
+    private String genSendProfessNoteContent(String name, String content) {
+        content = content.replace("{{name}}", name);
+        content = content.replace("{{url}}", EMAIL_SEND_PROFESS_NOTE_URL);
+        return content.replace("{{time}}", DateUtil.getNowTime());
     }
 
     @Override
@@ -184,28 +206,104 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
             ExceptionCast.cast("邮箱不合法！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
         }
 
-        //将待匹配用户toUser放入Redis
-        redisTemplate.opsForValue().set("SEND_NOTE_TO_USER_FROM_" + from.getId(), professRecordVo);
+        if (!RegexUtils.validateMobilePhone(professRecordVo.getToPhone())) {
+            ExceptionCast.cast("手机号不合法！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
+
+        if (professRecordVo.getToPhone().equals(from.getPhone())) {
+            ExceptionCast.cast("不能表白自己哟~~",ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
+
+        professRecordVo.setToEmail(professRecordVo.getToEmail().toLowerCase());
+
+        //校验是否存在重复表白
+        //所有表白记录
+        List<TbProfessRecord> historyRecords = findListByFromId(professRecordVo.getFromId());
+        for (TbProfessRecord record : historyRecords) {
+            if (!record.getStatus().equals("4") && !record.getStatus().equals("5")) {
+                ExceptionCast.cast("表白正在进行中，不可以重复发起表白~~", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+            }
+        }
+
+        // 校验被表白者是否已完成注册，未注册则将表白记录存入redis
+
+        TbUser toUser = userService.findOneByPhone(professRecordVo.getToPhone());
+
+        TbProfessRecord insertProfessRecord = new TbProfessRecord();
+
+        List<ProfessRecordVo> toUserProfessRecords = (List<ProfessRecordVo>) redisTemplate.opsForValue().get("SEND_PROFESS_NOTE_TO_USER_PHONE_" + professRecordVo.getToPhone());
+
+        if (toUserProfessRecords == null) {
+            toUserProfessRecords = new ArrayList<ProfessRecordVo>();
+        }
+
+        if (toUser != null) {
+            insertProfessRecord.setToId(toUser.getId());
+        }
 
         // insert ProfessRecord
-        TbProfessRecord professRecord = new TbProfessRecord();
-        professRecord.setFromId(professRecordVo.getFromId());
-        professRecord.setCreated(new Date());
-        professRecord.setId(null);
-        professRecord.setStatus("1");
-        professRecord.setProfessId(professService.add(new TbProfess()).getId());
-        professRecordDao.insert(professRecord);
+        insertProfessRecord.setFromId(professRecordVo.getFromId());
+        insertProfessRecord.setCreated(new Date());
+        insertProfessRecord.setId(null);
+        insertProfessRecord.setStatus("1");
+        insertProfessRecord.setProfessId(professService.add(new TbProfess()).getId());
+        professRecordDao.insert(insertProfessRecord);
+
+        if (toUser == null) {
+            //将待匹配用户toUser放入Redis
+            professRecordVo.setProfessRecordId(insertProfessRecord.getId());
+            toUserProfessRecords.add(professRecordVo);
+            redisTemplate.opsForValue().set("SEND_PROFESS_NOTE_TO_USER_PHONE_" + professRecordVo.getToPhone(), toUserProfessRecords);
+        }
 
         //发送邮件通知
-        EmailMessage message = new EmailMessage(professRecordVo.getToEmail(),EMAIL_SEND_PROFESS_NOTE_TITLE,genSendProfessNoteContent(professRecordVo.getToName()));
-        rabbitTemplate.convertAndSend(EMAIL_EXCHANGE,EMAIL_ROUTINGKEY,JsonUtils.toString(message));
+        EmailMessage message;
+        if (toUser == null) {
+            message = new EmailMessage(professRecordVo.getToEmail(), EMAIL_SEND_PROFESS_NOTE_TITLE, genSendProfessNoteContent(professRecordVo.getToName(), EMAIL_SEND_NOT_SURE_PROFESS_NOTE_CONTENT));
+        } else {
+            message = new EmailMessage(professRecordVo.getToEmail(), EMAIL_SEND_PROFESS_NOTE_TITLE, genSendProfessNoteContent(toUser.getNickName(), EMAIL_SEND_SURE_PROFESS_NOTE_CONTENT));
+        }
 
-        return findEntityById(professRecord.getId());
+        rabbitTemplate.convertAndSend(EMAIL_EXCHANGE, EMAIL_ROUTINGKEY, JsonUtils.toString(message));
+
+        return findEntityById(insertProfessRecord.getId());
     }
 
 
     @Override
-    public ProfessRecordEntity updateToId(Long id,Long toId) {
+    public List<ProfessRecordEntity> matching(Long toId) {
+
+        TbUser toUser = userService.findOneById(toId);
+
+        if (toUser == null || !RegexUtils.validateMobilePhone(toUser.getPhone())) {
+            ExceptionCast.cast("参数不合法！", ExceptionCodeEnum.ILLEGAL_ARGS_EXCEPTION.getCode());
+        }
+
+        //开始匹配
+        //toUser所有的表白
+        List<ProfessRecordVo> list = (List<ProfessRecordVo>) redisTemplate.opsForValue().get("SEND_PROFESS_NOTE_TO_USER_PHONE_" + toUser.getPhone());
+
+        if (list == null) {
+            return null;
+        }
+
+        List<ProfessRecordEntity> recordEntityList = new ArrayList<>();
+
+        for (ProfessRecordVo vo : list) {
+            //修改表白记录
+            ProfessRecordEntity entity = updateToIdStatus(vo.getProfessRecordId(), toUser.getId(), "1");//响应
+            recordEntityList.add(entity);
+        }
+
+        //清空被表白redis记录
+        redisTemplate.delete("SEND_PROFESS_NOTE_TO_USER_PHONE_" + toUser.getPhone());
+
+        return recordEntityList;
+    }
+
+
+    @Override
+    public ProfessRecordEntity updateToIdStatus(Long id, Long toId, String status) {
 
         TbProfessRecord one = findOneById(id);
 
@@ -220,9 +318,8 @@ public class ProfessRecordServiceImpl implements ProfessRecordService {
         }
 
         one.setToId(toId);
-
+        one.setStatus(status);
         professRecordDao.updateById(one);
-
         return findEntityById(one.getId());
     }
 

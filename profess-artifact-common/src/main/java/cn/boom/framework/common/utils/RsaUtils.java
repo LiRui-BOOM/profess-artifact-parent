@@ -103,7 +103,7 @@ public class RsaUtils {
 
     public static void main(String[] args) {
         try {
-            generateKey("D:\\auth_key\\xupt-acat-recruitment\\id_key_rsa.pub", "D:\\auth_key\\xupt-acat-recruitment\\id_key_rsa", "xupt-acat", 2048);
+            //generateKey("C:\\Users\\BOOM\\Desktop\\id_key_rsa.pub", "C:\\Users\\BOOM\\Desktop\\id_key_rsa", "leshi", 2048);
         } catch (Exception e) {
             e.printStackTrace();
         }

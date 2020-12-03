@@ -19,6 +19,11 @@ public class ProfessRecordController {
         return R.ok().put("data",professRecordService.findEntityById(id));
     }
 
+    @GetMapping("findEntityByFromTo/{from}/{to}")
+    public R  findEntityByFromTo(@PathVariable("from") Long from,@PathVariable("to") Long to) {
+        return R.ok().put("data",professRecordService.findEntityByFromTo(from,to));
+    }
+
     @GetMapping("findEntityListByFromId/{from}")
     public R  findEntityListByFromId(@PathVariable("from") Long from) {
         return R.ok().put("data",professRecordService.findEntityListByFromId(from));
@@ -32,6 +37,11 @@ public class ProfessRecordController {
     @PostMapping("add")
     public R  add(@RequestBody ProfessRecordVo professRecordVo) {
         return R.ok().put("data",professRecordService.add(professRecordVo));
+    }
+
+    @GetMapping("matching/{toId}")
+    public R matching(@PathVariable("toId") Long toId) {
+        return R.ok().put("data",professRecordService.matching(toId));
     }
 
     @PutMapping("updateStatusById/{id}/{status}")

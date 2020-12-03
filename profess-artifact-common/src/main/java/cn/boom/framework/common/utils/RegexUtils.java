@@ -20,7 +20,7 @@ public class RegexUtils {
         if (null == email || "".equals(email)) {
             return false;
         }
-        String regEx1 = "^([a-z0-9A-Z]+[-|\\.]?)+[a-z0-9A-Z]@([a-z0-9A-Z]+(-[a-z0-9A-Z]+)?\\.)+[a-zA-Z]{2,}$";
+        String regEx1 = "^([a-z0-9A-Z]+[_|\\.]?)+[a-z0-9A-Z]@([a-z0-9A-Z]+(-[a-z0-9A-Z]+)?\\.)+[a-zA-Z]{2,}$";
         Pattern p = Pattern.compile(regEx1);
         Matcher m = p.matcher(email);
         if (m.matches()) {

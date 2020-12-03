@@ -9,7 +9,7 @@ import cn.boom.framework.model.vo.ChatFromClientMessageVo;
 import cn.boom.framework.model.vo.ChatFromServerMessageVo;
 import cn.boom.service.chat.client.UserServiceClient;
 import cn.boom.service.chat.config.SpringUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.core.BoundListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+@DependsOn("springUtil")
 @Component
 @ServerEndpoint("/chat/{id}")
 public class ChatEndpoint {

@@ -12,6 +12,8 @@ public interface ProfessRecordService {
 
     public abstract ProfessRecordEntity findEntityById(Long id);
 
+    public abstract ProfessRecordEntity findEntityByFromTo(Long from,Long to);
+
     public abstract List<TbProfessRecord> findListByFromId(Long from);
 
     public abstract List<ProfessRecordEntity> findEntityListByFromId(Long from);
@@ -22,7 +24,9 @@ public interface ProfessRecordService {
 
     public abstract ProfessRecordEntity add(ProfessRecordVo professRecordVo);
 
-    public abstract ProfessRecordEntity updateToId(Long id,Long toId);
+    public abstract List<ProfessRecordEntity> matching(Long toId);
+
+    public abstract ProfessRecordEntity updateToIdStatus(Long id,Long toId,String status);
 
     public abstract ProfessRecordEntity updateStatusById(Long id, String status);
 

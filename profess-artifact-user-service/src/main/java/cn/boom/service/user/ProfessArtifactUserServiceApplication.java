@@ -14,8 +14,8 @@ import org.springframework.context.annotation.ComponentScan;
 @EnableDiscoveryClient
 @EnableFeignClients
 @MapperScan(basePackages = {"cn.boom.service.user.dao"})
-//@ComponentScan(basePackages = {"cn.boom.framework.common.exception","cn.boom.service.user"}) // ExceptionHandler
-public class ProfessArtifactUserServiceApplication {
+@ComponentScan(basePackages = {"cn.boom.framework.common.exception","cn.boom.service.user"}) // ExceptionHandler
+public  class  ProfessArtifactUserServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(ProfessArtifactUserServiceApplication.class, args);
     }

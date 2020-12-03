@@ -16,7 +16,7 @@
         <module>profess-artifact-user-gateway</module>
         <module>profess-artifact-note-service</module>
         <module>profess-artifact-oss-service</module>
-        <module>profess-artifacat-auth-baidu-service</module>
+        <module>profess-artifact-auth-baidu-service</module>
         <module>profess-artifact-resource-service</module>
     </modules>
 

@@ -4,6 +4,8 @@ import cn.boom.framework.common.response.R;
 import cn.boom.framework.common.utils.BaiduCryptUtils;
 import cn.boom.framework.model.entity.TbUser;
 import cn.boom.framework.model.vo.BaiduCryptVo;
+import cn.boom.framework.model.vo.UpdatePasswordByEmailVo;
+import cn.boom.framework.model.vo.UpdatePasswordByOldPasswordVo;
 import cn.boom.service.user.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -82,5 +84,33 @@ public class UserController {
         String auth = request.getHeader("Authorization");
         String token = auth.replace("Bearer ", "");
         return R.ok().put("data",userService.getPhoneNumber(baiduCryptVo,token));
+    }
+
+    @GetMapping("/sendBindingCheckCodeEmail/{id}/{email}")
+    public R sendBindingCheckCodeEmail(@PathVariable("id") Long id, @PathVariable("email") String email) {
+        userService.sendBindingCheckCodeEmail(id, email);
+        return R.ok();
+    }
+
+    @PutMapping("/bindingEmailByToken/{id}/{token}")
+    public R bindingEmailByToken(@PathVariable("id") Long id, @PathVariable("token") String token) {
+        return R.ok().put("data", userService.bindingEmailByToken(id, token));
+    }
+
+    @GetMapping("/sendUpdatePasswordCheckCodeEmail/{email}")
+    public R sendUpdatePasswordCheckCodeEmail(@PathVariable("email") String email) {
+        return R.ok().put("data", userService.sendUpdatePasswordCheckCodeEmail(email));
+    }
+
+    @PutMapping("/updatePasswordByEmailCheckCode")
+    public R updatePasswordByEmailCheckCode(@RequestBody UpdatePasswordByEmailVo vo) {
+        userService.updatePasswordByEmailCheckCode(vo);
+        return R.ok();
+    }
+
+    @PutMapping("/updatePasswordByOldPassword")
+    public R updatePasswordByOldPassword(@RequestBody UpdatePasswordByOldPasswordVo vo) {
+        userService.updatePasswordByOldPassword(vo);
+        return R.ok();
     }
 }
